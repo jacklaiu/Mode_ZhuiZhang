@@ -107,6 +107,9 @@ def listen():
     candidates = me['candidates']
     codes = [item[0] for item in candidates]
     while True:
+        now = util.getHMS()
+        if now > '15:00:00':
+            break
         code_price_rel = util.getRealTime_Prices(codes)
         for code in code_price_rel.keys():
             if code in denyCodes: continue
@@ -121,18 +124,24 @@ def listen():
             print(distance)
             # 发现符合标的，发送通知给我审核
             if distance > High_Distance:
-                #requests.get('http://95.163.200.245:64210/smtpclient/zhuizhang_allow_security_buy/'+code+'/jacklaiu@163.com')
+                requests.get('http://95.163.200.245:64210/smtpclient/zhuizhang_allow_security_buy/'+code+'/jacklaiu@163.com')
                 log.log("Send " + code)
                 denyCodes.append(code)
-            nowDistance = 0
 
         time.sleep(20)
 
-prepare()
-
-filter()
-
-listen()
+while True:
+    today = util.getYMD()
+    now = util.getHMS()
+    if util.isOpen(today) and now > '09:35:00' and now < '15:00:00':
+        log.log('start checking...')
+    else:
+        me = {}
+        time.sleep(60)
+        continue
+    prepare()
+    filter()
+    listen()
 
 # arr = [1,2,3,4]
 # print(arr[0:2])
@@ -143,8 +152,8 @@ listen()
 # d = sorted(d.items(), key=lambda item: item[1], reverse=True)
 # print(d)
 
-
+#
 # ld = util.getLastestOpenDate()
-# df = ts.get_k_data('601318', util.preOpenDate(util.getLastestOpenDate(), 1), util.preOpenDate(util.getLastestOpenDate(), 1))
+# df = ts.get_k_data('601318', util.getLastestOpenDate(), util.getLastestOpenDate())
 # index = df.index
 # print(df['close'][df.index.values[0]])
