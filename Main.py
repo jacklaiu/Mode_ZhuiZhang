@@ -8,7 +8,7 @@ import time
 TimeLen = 100
 FutureRate = 1.03
 LT_PreReate_Continue = -2
-High_Distance = 9
+High_Distance = 20
 
 me = {}
 
@@ -21,7 +21,7 @@ def prepare():
     starttime = util.preOpenDate(util.getLastestOpenDate(), TimeLen)
     total = dao.select('select count(0) count from t_security_daily where date>=%s order by date desc', (starttime))[0]['count']
     fromindex = 0
-    pagesize = 500
+    pagesize = 100
     count = 0
     while True:
         print("Range: " + str(fromindex) + "->" + str(fromindex + pagesize))
@@ -73,21 +73,20 @@ def filter():
             continue
         # 过滤新高距离小于High_Distance的个股-------------------------------------------
         items = code_items_rel[code]
-        lastestClose = code_lastestItem_rel[code]['close']
-        lastestClose = float(lastestClose)
-        futureClose = round(lastestClose * FutureRate, 2)
+        if code == '002087':
+            print()
         x1 = 0
         for item in items[1:]:
             high = float(item['high'])
-            if lastestClose >= high:
+            if float(code_lastestItem_rel[code]['close']) >= high:
                 x1 = x1 + 1
             else:
                 code_preCloseDistance_rel.setdefault(code, x1)
                 break
         x2 = 0
-        for item in items:
+        for item in items[1:]:
             high = float(item['high'])
-            if futureClose > high:
+            if round(float(code_lastestItem_rel[code]['close']) * FutureRate, 2) > high:
                 x2 = x2 + 1
             else:
                 break
@@ -107,41 +106,45 @@ def listen():
     candidates = me['candidates']
     codes = [item[0] for item in candidates]
     while True:
-        now = util.getHMS()
-        if now > '15:00:00':
-            break
+        if util.getHMS() > '15:00:00': break
         code_price_rel = util.getRealTime_Prices(codes)
         for code in code_price_rel.keys():
             if code in denyCodes: continue
             nowDistance = 0
-            for item in code_items_rel[code][1:]:
+            for item in code_items_rel[code]:
                 high = float(item['high'])
                 if code_price_rel[code] >= high:
                     nowDistance = nowDistance + 1
                 else:
                     break
             distance = nowDistance - code_preCloseDistance_rel[code]
-            print(distance)
+            #print(distance)
             # 发现符合标的，发送通知给我审核
             if distance > High_Distance:
                 requests.get('http://95.163.200.245:64210/smtpclient/zhuizhang_allow_security_buy/'+code+'/jacklaiu@163.com')
-                log.log("Send " + code)
+                log.log("Send: " + code + " Distance: " + str(distance))
                 denyCodes.append(code)
 
-        time.sleep(20)
+        time.sleep(10)
 
 while True:
     today = util.getYMD()
     now = util.getHMS()
-    if util.isOpen(today) and now > '09:35:00' and now < '15:00:00':
-        log.log('start checking...')
-    else:
+    prepareComplete = False
+    filterComplete = False
+    if prepareComplete is False and util.isOpen(today) and now > '09:00:00':
+        log.log('start prepare...')
+        prepare()
+        prepareComplete = True
+    if filterComplete is False and util.isOpen(today) and now > '09:00:00':
+        log.log('start filter...')
+        filter()
+        filterComplete = True
+    if util.isOpen(today) and'09:30:00' < now < '15:00:00':
+        log.log('start listen...')
+        listen()
         me = {}
-        time.sleep(60)
-        continue
-    prepare()
-    filter()
-    listen()
+    time.sleep(60)
 
 # arr = [1,2,3,4]
 # print(arr[0:2])
