@@ -127,16 +127,21 @@ def listen():
 
         time.sleep(10)
 
+
+
+
+
+log.log("Start Mode_ZhuiZhang")
+prepareComplete = False
+filterComplete = False
 while True:
     today = util.getYMD()
     now = util.getHMS()
-    prepareComplete = False
-    filterComplete = False
-    if prepareComplete is False and util.isOpen(today) and now > '09:00:00':
+    if prepareComplete is False and (util.isOpen(today) and now > '09:00:00'):
         log.log('start prepare...')
         prepare()
         prepareComplete = True
-    if filterComplete is False and util.isOpen(today) and now > '09:00:00':
+    if filterComplete is False and (util.isOpen(today) and now > '09:00:00'):
         log.log('start filter...')
         filter()
         filterComplete = True
@@ -144,6 +149,9 @@ while True:
         log.log('start listen...')
         listen()
         me = {}
+        prepareComplete = False
+        filterComplete = False
+
     time.sleep(60)
 
 # arr = [1,2,3,4]
