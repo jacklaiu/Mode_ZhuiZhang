@@ -5,10 +5,15 @@ import tushare as ts
 import requests
 import time
 
-TimeLen = 100
-FutureRate = 1.03
-LT_PreReate_Continue = -2
-High_Distance = 20
+Prepare_TimeLen = 100
+
+Filter_FutureRate = 1.03
+
+Filter_LT_PreReate_Continue = -2
+
+Filter_High_Distance = 20
+
+Listen_CurrentLimitRate = 9
 
 me = {}
 
@@ -18,7 +23,7 @@ def prepare():
     me.setdefault('securities', securities)
     #code_items_rel
     code_items_rel = {}
-    starttime = util.preOpenDate(util.getLastestOpenDate(), TimeLen)
+    starttime = util.preOpenDate(util.getLastestOpenDate(), Prepare_TimeLen)
     total = dao.select('select count(0) count from t_security_daily where date>=%s order by date desc', (starttime))[0]['count']
     fromindex = 0
     pagesize = 100
@@ -69,7 +74,7 @@ def filter():
         close = float(item['close'])
         pre_close = float(item['pre_close'])
         rate = round((close - pre_close) / pre_close * 100, 2)
-        if rate < LT_PreReate_Continue:
+        if rate < Filter_LT_PreReate_Continue:
             continue
         # 过滤新高距离小于High_Distance的个股-------------------------------------------
         items = code_items_rel[code]
@@ -86,12 +91,12 @@ def filter():
         x2 = 0
         for item in items[1:]:
             high = float(item['high'])
-            if round(float(code_lastestItem_rel[code]['close']) * FutureRate, 2) > high:
+            if round(float(code_lastestItem_rel[code]['close']) * Filter_FutureRate, 2) > high:
                 x2 = x2 + 1
             else:
                 break
         distance = x2 - x1
-        if distance < High_Distance:
+        if distance < Filter_High_Distance:
             continue
         code_distance_rel.setdefault(code, distance)
         index = index + 1
@@ -107,8 +112,11 @@ def listen():
     codes = [item[0] for item in candidates]
     while True:
         if util.getHMS() > '15:00:00': break
-        code_price_rel = util.getRealTime_Prices(codes)
+        ret = util.getRealTime_Prices(codes)
+        code_price_rel = ret['code_price_rel']
+        code_rate_rel = ret['code_rate_rel']
         for code in code_price_rel.keys():
+            if code not in code_rate_rel.keys() or code_rate_rel[code] > Listen_CurrentLimitRate: continue
             if code in denyCodes: continue
             nowDistance = 0
             for item in code_items_rel[code]:
@@ -118,10 +126,14 @@ def listen():
                 else:
                     break
             distance = nowDistance - code_preCloseDistance_rel[code]
+
             #print(distance)
             # 发现符合标的，发送通知给我审核
-            if distance > High_Distance:
-                requests.get('http://95.163.200.245:64210/smtpclient/zhuizhang_allow_security_buy/'+code+'/jacklaiu@163.com')
+            if distance > Filter_High_Distance:
+                try:
+                    requests.get('http://95.163.200.245:64210/smtpclient/zhuizhang_allow_security_buy/'+code+'/jacklaiu@163.com')
+                except:
+                    time.sleep(5)
                 log.log("Send: " + code + " Distance: " + str(distance))
                 denyCodes.append(code)
 
