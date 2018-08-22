@@ -157,15 +157,19 @@ def getRealTime_Prices(codes):
     count = 0
     pagesize = 20
     code_price_rel = {}
+    code_rate_rel = {}
     while count < codes.__len__():
         dfs = ts.get_realtime_quotes(codes[count:(count+pagesize)])
         for item in dfs.iterrows():
             row = item[1]
             price = float(row['price'])
             code = row['code']
+            pre_close = float(row['pre_close'])
+            rate = round((price - pre_close) / pre_close * 100, 2)
             code_price_rel.setdefault(code, price)
+            code_rate_rel.setdefault(code, rate)
         count = count + pagesize
-    return code_price_rel
+    return {'code_rate_rel': code_rate_rel, 'code_price_rel': code_price_rel}
 
 
 # def getOpenDates():
