@@ -9,11 +9,11 @@ Prepare_TimeLen = 100
 
 Filter_FutureRate = 1.03
 
-Filter_LT_PreReate_Continue = -2
+Filter_Left_PreReate_Continue = -2
 
 Filter_High_Distance = 20
 
-Listen_CurrentLimitRate = 9
+Listen_CurrentLimitRate = 14
 
 me = {}
 
@@ -73,25 +73,27 @@ def filter():
         item = code_lastestItem_rel[code]
         close = float(item['close'])
         pre_close = float(item['pre_close'])
+        
         rate = round((close - pre_close) / pre_close * 100, 2)
-        if rate < Filter_LT_PreReate_Continue:
+        if rate < Filter_Left_PreReate_Continue:
             continue
+            
         # 过滤新高距离小于High_Distance的个股-------------------------------------------
         items = code_items_rel[code]
         if code == '002087':
             print()
         x1 = 0
         for item in items[1:]:
-            high = float(item['high'])
-            if float(code_lastestItem_rel[code]['close']) >= high:
+            close = float(item['close'])
+            if float(code_lastestItem_rel[code]['close']) >= close:
                 x1 = x1 + 1
             else:
                 code_preCloseDistance_rel.setdefault(code, x1)
                 break
         x2 = 0
         for item in items[1:]:
-            high = float(item['high'])
-            if round(float(code_lastestItem_rel[code]['close']) * Filter_FutureRate, 2) > high:
+            close = float(item['close'])
+            if round(float(code_lastestItem_rel[code]['close']) * Filter_FutureRate, 2) > close:
                 x2 = x2 + 1
             else:
                 break
@@ -120,8 +122,8 @@ def listen():
             if code in denyCodes: continue
             nowDistance = 0
             for item in code_items_rel[code]:
-                high = float(item['high'])
-                if code_price_rel[code] >= high:
+                close = float(item['close'])
+                if code_price_rel[code] >= close:
                     nowDistance = nowDistance + 1
                 else:
                     break
